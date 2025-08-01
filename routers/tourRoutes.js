@@ -9,9 +9,10 @@ const {
   getTourStats,
   getMonthlyPlan,
 } = require("../controller/tourController");
+const authController = require("../controller/authController");
 
 const router = express.Router();
-router.route("/").get(getAllTours).post(createTour);
+router.route("/").get(authController.protect, getAllTours).post(createTour);
 router.route("/tour-stats").get(getTourStats);
 router.route("/monthly-plan/:year").get(getMonthlyPlan);
 router.param("id", checkID);
