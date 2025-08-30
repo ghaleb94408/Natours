@@ -1,7 +1,9 @@
+const { promisify } = require("util");
 const jwt = require("jsonwebtoken");
 const User = require("../model/userModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
+const { decode } = require("punycode");
 
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -36,7 +38,6 @@ exports.login = catchAsync(async (req, res, next) => {
   if (!user || !correct)
     return next(new AppError("email and password do not match", 401));
   const token = signToken(user._id);
-  console.log(token);
   res.status(200).json({
     status: "success",
     token,
@@ -44,5 +45,31 @@ exports.login = catchAsync(async (req, res, next) => {
 });
 
 exports.protect = catchAsync(async (req, res, next) => {
+  let token;
+  // Check if token exists
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+  if (!token)
+    return next(
+      new AppError(
+        "You are not logged in, please log in to access the Data",
+        401
+      )
+    );
+  // Verify token
+  const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
+  // check if user still exists
+  const freshUser = await User.findById(decoded.id);
+  if (!freshUser)
+    return next(new AppError("This user does no longer exist", 401));
+  console.log(freshUser);
+  //check if user has changed his password after login
+  if (freshUser.changedPasswordAfterLogin(decoded.iat))
+    return next(new AppError("please log in again", 401));
+  req.user = freshUser;
   next();
 });

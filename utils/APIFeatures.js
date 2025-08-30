@@ -28,7 +28,7 @@ class APIFeatures {
   }
   selectFields() {
     if (this.queryString.fields) {
-      this.query.select(req.query.fields.replaceAll(",", " "));
+      this.query.select(this.queryString.fields.replaceAll(",", " "));
     } else {
       this.query.select("-__v");
     }
